@@ -1,7 +1,54 @@
 import hashlib
 import time
 import json
+import sqlite3
 from ecdsa import SigningKey, VerifyingKey, BadSignatureError, SECP256k1
+
+# -------------------------------------------- DATABASE -------------------------------------------- #
+DB_FILE = "jalebi.db"
+def get_db():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Blocks
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS blocks (
+        height INTEGER PRIMARY KEY,
+        hash TEXT,
+        prev_hash TEXT,
+        timestamp REAL
+    )
+    """)
+
+    # Transactions
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS transactions (
+        txid TEXT PRIMARY KEY,
+        block_height INTEGER,
+        sender TEXT,
+        recipient TEXT,
+        amount INTEGER
+    )
+    """)
+
+    # UTXO set
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS utxos (
+        txid TEXT,
+        recipient TEXT,
+        amount INTEGER,
+        spent INTEGER DEFAULT 0,
+        PRIMARY KEY (txid, recipient)
+    )
+    """)
+
+    conn.commit()
+    conn.close()
 
 # -------------------------------------------- Block -------------------------------------------- #
 class JalebiBlock:
